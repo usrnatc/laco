@@ -8,9 +8,9 @@ and SIMD-accelerated lexing. This project is currently under active development.
 ## Features
 
 - **PL/0 Base Language Support** with extended features including
- - `repeat...until` loop construct
- - Additional bitwise and logical operators
- - Improved type system with subrange types
+  - `repeat...until` loop construct
+  - Additional bitwise and logical operators
+  - Improved type system with subrange types
 - **SIMD-Accelerated Lexer** for improved performance
 - Planned multi-stage optimisation pipeline (L1 - L3 optimisations)
 - Windows x64 target support
@@ -116,7 +116,9 @@ ProcedureHead       ->      KW_PROCEDURE IDENTIFIER LPAREN FormalParameters RPAR
 FormalParameters    ->
 CompoundStatement   ->      KW_BEGIN StatementList KW_END
 StatementList       ->      Statement {SEMICOLON Statement}
-Statement           ->      Assignment | CallStatement | ReadStatement | WriteStatement | WhileStatement | IfStatement | CompoundStatement | RepeatStatement
+Statement           ->      Assignment | CallStatement | ReadStatement |
+                            WriteStatement | WhileStatement | IfStatement |
+                            CompoundStatement | RepeatStatement
 Assignment          ->      LValue ASSIGN Condition
 CallStatement       ->      KW_CALL IDENTIFIER LPAREN ActualParameters RPAREN
 ActualParameters    ->
@@ -126,7 +128,8 @@ WhileStatement      ->      KW_WHILE Condition KW_THEN Statement KW_ELSE Stateme
 RepeatStatement     ->      KW_REPEAT StatementList KW_UNTIL Condition
 Condition           ->      [INV] RelCondition
 RelCondition        ->      Exp [RelOp Exp]
-RelOp               ->      EQUALS | NEQUALS | LESS | GREATER | LEQUALS | GEQUALS | LOGAND | LOGOR | SHL | SHR
+RelOp               ->      EQUALS | NEQUALS | LESS | GREATER | LEQUALS | GEQUALS |
+                            LOGAND | LOGOR | SHL | SHR
 Exp                 ->      [PLUS | MINUS] Term {(PLUS | MINUS) Term}
 Term                ->      Factor {(TIMES | DIVIDE) Factor}
 Factor              ->      LPAREN Condition RPAREN | NUMBER | LValue
