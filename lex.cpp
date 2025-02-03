@@ -75,7 +75,7 @@ populate_keyword_lut(u16* LUT)
 }
 
 __m256i 
-v_classification_one_byte(__m256i Input)
+single_character_classification(__m256i Input)
 {
     __m256i LowerNibbleMask = _mm256_set_epi8(
         0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F,
@@ -217,16 +217,16 @@ __m256i
 run_sublexers(__m256i* CurrVec, __m256i* NextVec, const __m256i SrcCurrVec, u8 LastChar, b8* ChContinue, b8* EscContinue, b8* StrContinue, b8* LnCommContinue, b8* BlockCommContinue)
 {
     __m256i Tags = _mm256_setzero_si256();
-    line_comments_sub_lex(CurrVec, *NextVec, LnCommContinue);
+    lex_inline_comments(CurrVec, *NextVec, LnCommContinue);
 
     if (is_empty(*CurrVec))
         return Tags;
 
-    two_byte_punct_sub_lex(CurrVec, NextVec, &Tags);
-    one_byte_punct_sub_lex(CurrVec, *NextVec, &Tags, LastChar);
+    lex_two_character_symbol(CurrVec, NextVec, &Tags);
+    lex_single_character_symbol(CurrVec, *NextVec, &Tags, LastChar);
     replace_whitespace(CurrVec);
-    identifiers_sub_lex(*CurrVec, &Tags, LastChar == 0);
-    numeric_const_sub_lex(*CurrVec, &Tags, LastChar == 0);
+    lex_identifiers(*CurrVec, &Tags, LastChar == 0);
+    lex_numeric_constants(*CurrVec, &Tags, LastChar == 0);
     replace_token_body(&Tags);
 
     return Tags;
@@ -271,9 +271,9 @@ numeric_periods_mask(__m256i CurrVec, __m256i NextVec, u8 LastChar)
 }
 
 void 
-one_byte_punct_sub_lex(__m256i* CurrVec, __m256i NextVec, __m256i* Tags, u8 LastChar)
+lex_single_character_symbol(__m256i* CurrVec, __m256i NextVec, __m256i* Tags, u8 LastChar)
 {
-    __m256i Mask = v_classification_one_byte(*CurrVec);
+    __m256i Mask = single_character_classification(*CurrVec);
     Mask = _mm256_xor_si256(Mask, numeric_periods_mask(*CurrVec, NextVec, LastChar));
     *Tags = _mm256_blendv_epi8(*Tags, *CurrVec, Mask);
     *CurrVec = _mm256_blendv_epi8(*CurrVec, _mm256_setzero_si256(), Mask);
@@ -302,12 +302,12 @@ get_mask(const uint32_t Mask)
     return _mm256_cmpeq_epi8(VMask, _mm256_set1_epi64x(-1));
 }
 
-void remove_prefix_64(__m256i *Vec, uint64_t Prefix) {
+void remove_prefix_64(__m256i *Vec, u64 Prefix) {
     *Vec = _mm256_blendv_epi8(_mm256_set1_epi8(0), *Vec, _mm256_setr_epi64x(0xFFFFFFFFFFFFFFFF - Prefix, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,  0xFFFFFFFFFFFFFFFF));
 }
 
 void 
-two_byte_punct_sub_lex(__m256i* CurrVec, __m256i* NextVec, __m256i* Tags)
+lex_two_character_symbol(__m256i* CurrVec, __m256i* NextVec, __m256i* Tags)
 {
     const __m256i Shifted1 = look_ahead_one(*CurrVec, *NextVec);
     const char *FirstBytes = ":.!><|&";
@@ -360,7 +360,7 @@ alpha_mask(__m256i Vec)
 }
 
 void 
-identifiers_sub_lex(__m256i CurrVec, __m256i* Tags, b8 LastEmpty)
+lex_identifiers(__m256i CurrVec, __m256i* Tags, b8 LastEmpty)
 {
     __m256i IsAlpha = alpha_mask(CurrVec);
     __m256i IsUnderscore = _mm256_cmpeq_epi8(CurrVec, _mm256_set1_epi8('_'));
@@ -379,7 +379,7 @@ num_mask(__m256i Vec)
 }
 
 void 
-numeric_const_sub_lex(const __m256i CurrVec, __m256i* Tags, const b8 LastEmpty)
+lex_numeric_constants(const __m256i CurrVec, __m256i* Tags, const b8 LastEmpty)
 {
     __m256i NumStartMask = num_mask(CurrVec);
     uint32_t HasWhitespaceBefore = _mm256_movemask_epi8(_mm256_cmpeq_epi8(CurrVec, _mm256_setzero_si256()));
@@ -391,7 +391,7 @@ numeric_const_sub_lex(const __m256i CurrVec, __m256i* Tags, const b8 LastEmpty)
 }
 
 void 
-line_comments_sub_lex(__m256i* CurrVec, __m256i NextVec, b8* LnCommContinue)
+lex_inline_comments(__m256i* CurrVec, __m256i NextVec, b8* LnCommContinue)
 {
     const __m256i Shifted1 = look_ahead_one(*CurrVec, NextVec);
     __m256i IsSlash = _mm256_cmpeq_epi8(*CurrVec, _mm256_set1_epi8('/'));
